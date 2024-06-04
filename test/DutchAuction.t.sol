@@ -48,8 +48,33 @@ contract DutchAutionTest is Test {
 
     }
 
+    function testFuzzGetPriceBeforeTimeElapsed(uint256 duration) public{
+        vm.assume(duration < 3600 && duration > 0);
+        uint256 remainingAmount = startingPrice - (discountRate * duration);
+        vm.prank(tester);
+        vm.warp(block.timestamp + duration);
+        uint256 actualRemainingamount = dutchAuction.getPrice();
+
+        assertEq(actualRemainingamount, remainingAmount);
+
+    }
+
     function testBuyWhenTimeElapsed() public {
         vm.warp(block.timestamp + expiresAt);
+        uint256 accountBalance = 30 ether;
+        vm.deal(tester, accountBalance);
+
+
+        vm.expectRevert("Auction has already ended");
+
+
+        vm.prank(tester);
+        dutchAuction.buy{value: accountBalance}();
+    }     
+
+    function testFuzzBuyAfterTimeElapsed(uint duration) public {
+        vm.assume(duration > 3600 && duration < 86400); //duration must be after an hour but before 24 hours
+        vm.warp(block.timestamp + duration);
         uint256 accountBalance = 30 ether;
         vm.deal(tester, accountBalance);
 
@@ -63,6 +88,21 @@ contract DutchAutionTest is Test {
 
     function testBuyBeforeTimeElapsed() public {
         vm.warp(block.timestamp + 1800);
+        vm.deal(tester, startingPrice);
+
+        uint256 expectedPrice = dutchAuction.getPrice();
+        vm.prank(tester);
+        dutchAuction.buy{value: expectedPrice}();
+
+// Check that the item is marked as sold
+        assertTrue(dutchAuction.sold());
+
+
+    }    
+    
+    function testFuzzBuyBeforeTimeElapsed(uint256 duration) public {
+        vm.assume(duration < 3600 && duration > 0);
+        vm.warp(block.timestamp + duration);
         vm.deal(tester, startingPrice);
 
         uint256 expectedPrice = dutchAuction.getPrice();
