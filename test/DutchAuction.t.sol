@@ -142,5 +142,20 @@ contract DutchAutionTest is Test {
 
     }
 
+    function testRefund() public {
+        uint256 initialBalance = 20 ether;
+        vm.deal(tester, initialBalance);
+
+        vm.warp(block.timestamp + 1800);
+        
+        uint256 enteringAmount = 10 ether;
+        vm.prank(tester);
+        dutchAuction.buy{value: enteringAmount}();
+
+        
+        vm.assertEq(tester.balance, initialBalance - dutchAuction.getPrice());
+    }
+
+
     receive() external payable {}
 }
