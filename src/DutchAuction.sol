@@ -6,11 +6,12 @@ contract DutchAuction {
     uint256 private discountRate;
     uint256 private startAt;
     uint256 private expiresAt;
-    address payable public seller;
+    address payable immutable public seller;
     string private auctionItem;
     bool public sold;
 
     event AuctionEnded(address buyer, uint256 amount);
+    event Refund(address buyer, uint256 amount);
 
 
     constructor(
@@ -53,11 +54,21 @@ contract DutchAuction {
         // (bool success,) = seller.call{value: msg.value}('');
         // require(success, "Transfer failed");
 
-        seller.transfer(msg.value);
+        uint256 refund = msg.value - getPrice();
+
+        if(refund > 0){
+            payable(msg.sender).transfer(refund);
+            emit Refund(msg.sender, refund);
+        }
+
+        uint256 purchaseAmount = msg.value - refund;
+
+        seller.transfer(purchaseAmount);
 
         sold = true;
+        emit AuctionEnded(msg.sender, purchaseAmount);
 
-        emit AuctionEnded(msg.sender, msg.value);
+
        
     }
 
